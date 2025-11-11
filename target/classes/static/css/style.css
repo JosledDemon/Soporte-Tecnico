@@ -1,0 +1,16 @@
+body {
+    background-color: #f8f9fa;
+}
+
+h1, h3 {
+    color: #343a40;
+}
+
+.table {
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.table-warning { background-color: #fff3cd; }
+.table-info { background-color: #d1ecf1; }
+.table-success { background-color: #d4edda; }

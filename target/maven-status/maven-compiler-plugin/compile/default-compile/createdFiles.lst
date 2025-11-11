@@ -1,0 +1,9 @@
+com\empresa\soporte_tecnico\service\SolicitudServiceImpl.class
+com\empresa\soporte_tecnico\model\Cliente.class
+com\empresa\soporte_tecnico\model\Solicitud.class
+com\empresa\soporte_tecnico\SoporteTecnicoApplication.class
+com\empresa\soporte_tecnico\exception\GlobalExceptionHandler.class
+com\empresa\soporte_tecnico\config\OpenApiConfig.class
+com\empresa\soporte_tecnico\controller\SolicitudController.class
+com\empresa\soporte_tecnico\model\Tecnico.class
+com\empresa\soporte_tecnico\service\SolicitudService.class
