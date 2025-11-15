@@ -31,68 +31,41 @@ public class SolicitudServiceImpl implements SolicitudService {
 
     @Override
     public Solicitud crearSolicitud(Solicitud solicitud) {
-        try {
-            // 🟢 Logs para depuración
-            System.out.println("=== Datos recibidos en crearSolicitud() ===");
-            System.out.println("Descripción: " + solicitud.getDescripcion());
-            System.out.println("Cliente: " + (solicitud.getCliente() != null ? solicitud.getCliente().getId() : "null"));
-            System.out.println("Técnico: " + (solicitud.getTecnicoAsignado() != null ? solicitud.getTecnicoAsignado().getId() : "null"));
-            System.out.println("Estado: " + solicitud.getEstado());
-            System.out.println("===========================================");
-            // Verificar que el cliente venga con ID
-            if (solicitud.getCliente() == null || solicitud.getCliente().getId() == null) {
-                throw new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST,
-                        "Debe especificar el ID del cliente"
-                );
-            }
 
-            // Buscar cliente existente
-            Cliente cliente = clienteRepository.findById(solicitud.getCliente().getId())
-                    .orElseThrow(() -> new ResponseStatusException(
-                            HttpStatus.NOT_FOUND,
-                            "Cliente no encontrado con id " + solicitud.getCliente().getId()
-                    ));
-            solicitud.setCliente(cliente);
-
-            // Si tiene técnico asignado, buscarlo
-            if (solicitud.getTecnicoAsignado() != null && solicitud.getTecnicoAsignado().getId() != null) {
-                Tecnico tecnico = tecnicoRepository.findById(solicitud.getTecnicoAsignado().getId())
-                        .orElseThrow(() -> new ResponseStatusException(
-                                HttpStatus.NOT_FOUND,
-                                "Técnico no encontrado con id " + solicitud.getTecnicoAsignado().getId()
-                        ));
-                solicitud.setTecnicoAsignado(tecnico);
-            } else {
-                solicitud.setTecnicoAsignado(null);
-            }
-
-            // Asignar estado por defecto si no viene
-            if (solicitud.getEstado() == null || solicitud.getEstado().isEmpty()) {
-                solicitud.setEstado("Pendiente");
-            }
-
-            // 🔥 Verificación final
-            if (solicitud.getCliente() == null) {
-                throw new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST,
-                        "Debe asociarse un cliente válido"
-                );
-            }
-
-            return solicitudRepository.save(solicitud);
-
-        } catch (ResponseStatusException ex) {
-            throw ex;
-        } catch (Exception ex) {
+        // Validar cliente
+        if (solicitud.getCliente() == null || solicitud.getCliente().getId() == null) {
             throw new ResponseStatusException(
-                    HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Error al crear la solicitud: " + ex.getMessage(),
-                    ex
+                    HttpStatus.BAD_REQUEST,
+                    "Debe especificar el ID del cliente"
             );
         }
-    }
 
+        Cliente cliente = clienteRepository.findById(solicitud.getCliente().getId())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Cliente no encontrado con id " + solicitud.getCliente().getId() + " no existe"
+                ));
+        solicitud.setCliente(cliente);
+
+        // Validar técnico si viene
+        if (solicitud.getTecnicoAsignado() != null && solicitud.getTecnicoAsignado().getId() != null) {
+            Tecnico tecnico = tecnicoRepository.findById(solicitud.getTecnicoAsignado().getId())
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND,
+                            "Técnico no encontrado con id " + solicitud.getTecnicoAsignado().getId() + " no existe"
+                    ));
+            solicitud.setTecnicoAsignado(tecnico);
+        } else {
+            solicitud.setTecnicoAsignado(null);
+        }
+
+        // Estado por defecto
+        if (solicitud.getEstado() == null || solicitud.getEstado().isEmpty()) {
+            solicitud.setEstado("Pendiente");
+        }
+
+        return solicitudRepository.save(solicitud);
+    }
 
     @Override
     public List<Solicitud> obtenerSolicitudes() {
@@ -104,27 +77,42 @@ public class SolicitudServiceImpl implements SolicitudService {
         return solicitudRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
-                        "Solicitud no encontrada con id " + id
+                        "Solicitud no encontrada con id " + id + " no existe."
                 ));
     }
 
     @Override
     public Solicitud actualizarSolicitud(Long id, Solicitud solicitud) {
-        if (!solicitudRepository.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Solicitud no encontrada con id " + id);
-        }
 
-        // Revalidar cliente y técnico antes de actualizar
+        // Verificar existencia
+        Solicitud existente = solicitudRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Solicitud no encontrada con id " + id
+                ));
+
+        // Validar cliente
         if (solicitud.getCliente() != null && solicitud.getCliente().getId() != null) {
             Cliente cliente = clienteRepository.findById(solicitud.getCliente().getId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cliente no encontrado"));
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND,
+                            "Cliente no encontrado con id " + solicitud.getCliente().getId()
+                    ));
             solicitud.setCliente(cliente);
+        } else {
+            solicitud.setCliente(existente.getCliente());
         }
 
+        // Validar técnico
         if (solicitud.getTecnicoAsignado() != null && solicitud.getTecnicoAsignado().getId() != null) {
             Tecnico tecnico = tecnicoRepository.findById(solicitud.getTecnicoAsignado().getId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Técnico no encontrado"));
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND,
+                            "Técnico no encontrado con id " + solicitud.getTecnicoAsignado().getId()
+                    ));
             solicitud.setTecnicoAsignado(tecnico);
+        } else {
+            solicitud.setTecnicoAsignado(existente.getTecnicoAsignado());
         }
 
         solicitud.setId(id);
@@ -134,7 +122,10 @@ public class SolicitudServiceImpl implements SolicitudService {
     @Override
     public void eliminarSolicitud(Long id) {
         if (!solicitudRepository.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Solicitud no encontrada con id " + id);
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Solicitud no encontrada con id " + id
+            );
         }
         solicitudRepository.deleteById(id);
     }

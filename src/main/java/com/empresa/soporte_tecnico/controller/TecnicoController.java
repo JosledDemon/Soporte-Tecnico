@@ -10,9 +10,11 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -53,31 +55,49 @@ public class TecnicoController {
     @Operation(summary = "Obtener un técnico por ID")
     @GetMapping("/{id}")
     public ResponseEntity<TecnicoDto> obtenerTecnicoPorId(@PathVariable Long id) {
-        return tecnicoRepository.findById(id)
-                .map(TecnicoMapper::toDto)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+
+        Tecnico tecnico = tecnicoRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Técnico no encontrado con ID " + id
+                        )
+                );
+
+        return ResponseEntity.ok(TecnicoMapper.toDto(tecnico));
     }
 
     @Operation(summary = "Actualizar los datos de un técnico")
     @PutMapping("/{id}")
     public ResponseEntity<TecnicoDto> actualizarTecnico(@PathVariable Long id, @Valid @RequestBody TecnicoDto tecnicoDto) {
+
         if (!tecnicoRepository.existsById(id)) {
-            return ResponseEntity.notFound().build();
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "No se puede actualizar: el técnico con ID " + id + " no existe."
+            );
         }
+
         Tecnico tecnico = TecnicoMapper.toEntity(tecnicoDto);
         tecnico.setId(id);
-        tecnico = tecnicoRepository.save(tecnico);
-        return ResponseEntity.ok(TecnicoMapper.toDto(tecnico));
+
+        Tecnico actualizado = tecnicoRepository.save(tecnico);
+        return ResponseEntity.ok(TecnicoMapper.toDto(actualizado));
     }
 
     @Operation(summary = "Eliminar un técnico por ID")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminarTecnico(@PathVariable Long id) {
+
         if (!tecnicoRepository.existsById(id)) {
-            return ResponseEntity.notFound().build();
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "No se puede eliminar: el técnico con ID " + id + " no existe."
+            );
         }
+
         tecnicoRepository.deleteById(id);
         return ResponseEntity.noContent().build();
     }
 }
+

@@ -9,9 +9,12 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
+import org.springframework.web.server.ResponseStatusException;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -27,9 +30,7 @@ public class SolicitudController {
     }
 
     // 🟢 Crear una nueva solicitud
-
     @Operation(
-
             summary = "Crear una nueva solicitud",
             description = "Crea una nueva solicitud de soporte técnico",
             responses = {
@@ -75,9 +76,13 @@ public class SolicitudController {
     @GetMapping("/{id}")
     public ResponseEntity<SolicitudDto> obtenerSolicitudPorId(@PathVariable Long id) {
         Solicitud solicitud = solicitudService.obtenerPorId(id);
-        return solicitud != null
-                ? ResponseEntity.ok(SolicitudMapper.toDto(solicitud))
-                : ResponseEntity.notFound().build();
+
+        if (solicitud == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "La solicitud con ID " + id + " no existe.");
+        }
+
+        return ResponseEntity.ok(SolicitudMapper.toDto(solicitud));
     }
 
     // 🟤 Actualizar una solicitud existente
@@ -94,9 +99,13 @@ public class SolicitudController {
     public ResponseEntity<SolicitudDto> actualizarSolicitud(@PathVariable Long id, @RequestBody SolicitudDto solicitudDto) {
         Solicitud solicitud = SolicitudMapper.toEntity(solicitudDto);
         Solicitud actualizada = solicitudService.actualizarSolicitud(id, solicitud);
-        return actualizada != null
-                ? ResponseEntity.ok(SolicitudMapper.toDto(actualizada))
-                : ResponseEntity.notFound().build();
+
+        if (actualizada == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "No se pudo actualizar: la solicitud con ID " + id + " no existe.");
+        }
+
+        return ResponseEntity.ok(SolicitudMapper.toDto(actualizada));
     }
 
     // 🔴 Eliminar una solicitud por ID
@@ -110,7 +119,10 @@ public class SolicitudController {
     )
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminarSolicitud(@PathVariable Long id) {
+
+        // El service lanza la excepción si el ID no existe
         solicitudService.eliminarSolicitud(id);
+
         return ResponseEntity.noContent().build();
     }
 }

@@ -10,9 +10,11 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -53,30 +55,45 @@ public class ClienteController {
     @Operation(summary = "Obtener un cliente por ID")
     @GetMapping("/{id}")
     public ResponseEntity<ClienteDto> obtenerClientePorId(@PathVariable Long id) {
-        return clienteRepository.findById(id)
-                .map(ClienteMapper::toDto)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+
+        Cliente cliente = clienteRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResponseStatusException(HttpStatus.NOT_FOUND,
+                                "Cliente no encontrado con ID " + id)
+                );
+
+        return ResponseEntity.ok(ClienteMapper.toDto(cliente));
     }
 
     @Operation(summary = "Actualizar un cliente existente")
     @PutMapping("/{id}")
     public ResponseEntity<ClienteDto> actualizarCliente(@PathVariable Long id, @Valid @RequestBody ClienteDto clienteDto) {
+
         if (!clienteRepository.existsById(id)) {
-            return ResponseEntity.notFound().build();
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "No se puede actualizar: el cliente con ID " + id + " no existe."
+            );
         }
+
         Cliente cliente = ClienteMapper.toEntity(clienteDto);
         cliente.setId(id);
-        cliente = clienteRepository.save(cliente);
-        return ResponseEntity.ok(ClienteMapper.toDto(cliente));
+
+        Cliente actualizado = clienteRepository.save(cliente);
+        return ResponseEntity.ok(ClienteMapper.toDto(actualizado));
     }
 
     @Operation(summary = "Eliminar un cliente por ID")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminarCliente(@PathVariable Long id) {
+
         if (!clienteRepository.existsById(id)) {
-            return ResponseEntity.notFound().build();
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "No se puede eliminar: el cliente con ID " + id + " no existe."
+            );
         }
+
         clienteRepository.deleteById(id);
         return ResponseEntity.noContent().build();
     }
